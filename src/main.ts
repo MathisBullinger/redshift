@@ -24,12 +24,12 @@ const genPart = (): Particle => ({
   pos: [Math.random() * canvas.width, Math.random() * canvas.height],
   vel: [0, 0],
   cl: ranCl(),
-  r: 50 + Math.sqrt(Math.random() * 100000),
+  r: 10 + Math.random() ** 2 * 200,
   stop: (Math.random() * 0.5) ** 2,
 })
 
 const particles: Particle[] = []
-for (let i = 0; i < 20; i++) particles.push(genPart())
+for (let i = 0; i < 100; i++) particles.push(genPart())
 
 function render() {
   ctx.fillStyle = '#111'
@@ -47,6 +47,12 @@ function render() {
     ctx.fillStyle = gradient
     ctx.fillRect(x - r, y - r, r * 2, r * 2)
   }
+
+  const [cx, cy] = [0, 1].map(
+    (i) => particles.reduce((a, c) => a + c.pos[i], 0) / particles.length
+  )
+  ctx.strokeStyle = '#f00'
+  ctx.strokeRect(cx - 10, cy - 10, 20, 20)
 }
 
 let mouse: Vec | null = null
@@ -59,22 +65,27 @@ function update() {
   const dt = (performance.now() - last) / 1000
   last += dt * 1000
 
-  for (const { pos, vel } of particles) {
-    if (mouse) {
-      const d = Math.sqrt((mouse[0] - pos[0]) ** 2 + (mouse[1] - pos[1]) ** 2)
-      const f = -Math.min((3000 / d) ** 2, 500)
-      const fx = ((mouse[0] - pos[0]) / d) * -f
-      const fy = ((mouse[1] - pos[1]) / d) * -f
-      vel[0] += fx * dt
-      vel[1] += fy * dt
+  for (const part of particles) {
+    for (const p2 of particles) {
+      if (p2 === part) continue
+      attract(p2, part.pos, dt, part.r / 210)
     }
 
-    vel[0] *= 1 - 0.5 * dt
-    vel[1] *= 1 - 0.5 * dt
-
-    pos[0] += vel[0] * dt
-    pos[1] += vel[1] * dt
+    part.pos[0] += part.vel[0] * dt
+    part.pos[1] += part.vel[1] * dt
   }
+}
+
+function attract(part: Particle, origin: Vec, dt: number, m = 1) {
+  const d = Math.sqrt(
+    (origin[0] - part.pos[0]) ** 2 + (origin[1] - part.pos[1]) ** 2
+  )
+  if (d === 0) return
+  const f = Math.min(m / (d / 1000) ** 2, 500)
+  const fx = ((origin[0] - part.pos[0]) / d) * f
+  const fy = ((origin[1] - part.pos[1]) / d) * f
+  part.vel[0] += fx * dt
+  part.vel[1] += fy * dt
 }
 
 step()
