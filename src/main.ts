@@ -11,7 +11,6 @@ type Particle = {
   vel: vec.Vec
   cl: string
   r: number
-  stop: number
   previous: vec.Vec[]
 }
 
@@ -28,30 +27,58 @@ const genPart = (): Particle => ({
   vel: [Math.random() * maxV - maxV / 2, Math.random() * maxV - maxV / 2],
   cl: ranCl(),
   r: 10 + Math.random() ** 2 * 50,
-  stop: (Math.random() * 0.5) ** 2,
   previous: [],
 })
 
 const particles: Particle[] = []
 for (let i = 0; i < 100; i++) particles.push(genPart())
+particles[0].r = 10
 
 function render() {
-  ctx.fillStyle = '#111'
+  ctx.fillStyle = '#000'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  for (const {
-    pos: [x, y],
-    vel,
-    cl,
-    r,
-    stop,
-  } of particles) {
-    const gradient = ctx.createRadialGradient(x, y, 0.5 * r, x, y, r)
-    const a = ((Math.min(vec.mag(vel), 400) / 400) * 0xff) | 0
-    gradient.addColorStop(stop, cl + `0${a.toString(16)}`.slice(-2))
-    gradient.addColorStop(1, cl + '00')
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const part = particles[i]
+
+    let cla = '#fff8'
+    let clb = '#fff0'
+    if (i > 0) {
+      const rv = vec.sub(part.vel, particles[0].vel)
+
+      const rva = vec.angle(rv, vec.sub(part.pos, particles[0].pos))
+      const ar =
+        ((rva > Math.PI ? Math.PI - Math.PI - (rva - Math.PI) : rva) -
+          Math.PI / 2) /
+        (Math.PI / 2)
+
+      let rvm = (ar * Math.min(vec.mag(rv), 200)) / 200
+      rvm = rvm ** 2 * (rvm > 0 ? 1 : -1) * 0xff
+
+      const hd2 = (n: number) => `0${(n | 0).toString(16)}`.slice(-2)
+      const cl = `#${hd2(Math.max(-rvm, 0))}00${hd2(Math.max(rvm, 0))}`
+
+      cla = cl
+      clb = cl + '00'
+    }
+
+    const gradient = ctx.createRadialGradient(
+      part.pos[0],
+      part.pos[1],
+      0.5 * part.r,
+      part.pos[0],
+      part.pos[1],
+      part.r
+    )
+    gradient.addColorStop(0.5, cla)
+    gradient.addColorStop(1, clb)
     ctx.fillStyle = gradient
-    ctx.fillRect(x - r, y - r, r * 2, r * 2)
+    ctx.fillRect(
+      part.pos[0] - part.r,
+      part.pos[1] - part.r,
+      part.r * 2,
+      part.r * 2
+    )
   }
 }
 
@@ -69,10 +96,6 @@ function update() {
 
     part.pos = vec.add(part.pos, vec.mult(part.vel, dt))
 
-    // friction
-    // part.vel = vec.mult(part.vel, 1 - 0.2 * dt)
-
-    // collision
     if (part.pos[0] < 0) part.pos[0] = canvas.width
     else if (part.pos[0] > canvas.width) part.pos[0] = 0
     if (part.pos[1] < 0) part.pos[1] = canvas.height
