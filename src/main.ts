@@ -21,18 +21,28 @@ const ranCl = () =>
     .map(() => Math.floor(Math.random() * 200 + 55).toString(16))
     .join('')
 
-const maxV = 50
+const maxV = parseInt(
+  new URLSearchParams(location.search).get('initialMax') ?? (50 as any)
+)
 const genPart = (): Particle => ({
   pos: [Math.random() * canvas.width, Math.random() * canvas.height],
   vel: [Math.random() * maxV - maxV / 2, Math.random() * maxV - maxV / 2],
   cl: ranCl(),
-  r: 10 + Math.random() ** 2 * 50,
+  r: (10 + Math.random() ** 2 * 50) / (2 / devicePixelRatio),
   previous: [],
 })
 
 const particles: Particle[] = []
-for (let i = 0; i < 100; i++) particles.push(genPart())
-particles[0].r = 10
+for (
+  let i = 0;
+  i <
+  parseInt(new URLSearchParams(location.search).get('parts') ?? (200 as any));
+  i++
+)
+  particles.push(genPart())
+particles[0].r = 5 * devicePixelRatio
+
+const canMax = Math.max(canvas.width, canvas.height)
 
 function render() {
   ctx.fillStyle = '#000'
@@ -52,13 +62,18 @@ function render() {
           Math.PI / 2) /
         (Math.PI / 2)
 
-      let rvm = (ar * Math.min(vec.mag(rv), 200)) / 200
-      rvm = rvm ** 2 * (rvm > 0 ? 1 : -1) * 0xff
+      let rvm = ((ar * Math.min(vec.mag(rv), 300)) / 300) * 0xff
 
-      const hd2 = (n: number) => `0${(n | 0).toString(16)}`.slice(-2)
+      const hd2 = (n: number) => {
+        const str = (n | 0).toString(16)
+        return n >= 0x10 ? str : '0' + str
+      }
       const cl = `#${hd2(Math.max(-rvm, 0))}00${hd2(Math.max(rvm, 0))}`
 
-      cla = cl
+      const d = vec.mag(vec.sub(part.pos, particles[0].pos))
+      const a = ((1 - Math.min(d, canMax) / canMax) * 0xff) | 0
+
+      cla = cl + hd2(a)
       clb = cl + '00'
     }
 
